@@ -142,14 +142,14 @@ task generateInfo(type: DefaultTask) {
 
 shadowJar {
 	doFirst {
-		new File(destinationDir, archiveName).delete()
+		new File(destinationDirectory.get().asFile, archiveBaseName.get()).delete()
 	}
 
 	from sourceSets.main.java.srcDirs
 	from 'LICENSE'
 	from generatedResourcesDirectory
 
-	archiveName = jar.archiveName
+	archiveBaseName.set(jar.archiveBaseName)
 
 	exclude 'META-INF/**'
 	relocate 'org.apache', 'protocolsupport.libs.org.apache'
@@ -166,9 +166,9 @@ task postprocessFatJar(type: Zip) {
 		"protocolsupport/zplatform/impl/spigot/entitytracker/PaperSpigotEntityTrackerEntryInjectorMap.class",
 		"protocolsupport/zplatform/impl/spigot/injector/SpigotEntityTrackerInjector.class"
 	));
-	File originalJar = new File(shadowJar.destinationDir, shadowJar.archiveName)
+	File originalJar = new File(shadowJar.destinationDirectory.get().asFile, shadowJar.archiveFileName.get())
 
-	archiveName = shadowJar.archiveName
+	archiveFileName = shadowJar.archiveFileName
 
 	from(zipTree(originalJar)) {
 		exclude(workaroundRelocationClasses)
@@ -182,8 +182,8 @@ task postprocessFatJar(type: Zip) {
 
 task copyFinalJarToTarget(type: DefaultTask) {
 	doLast {
-		Files.copy(new File(postprocessFatJar.archivePath.path).toPath(),
-			new File(targetJarDirectory, jar.baseName + '.jar').toPath(),
+		Files.copy(postprocessFatJar.archiveFile.get().asFile.toPath(),
+			new File(targetJarDirectory, jar.archiveBaseName.get() + '.jar').toPath(),
 			StandardCopyOption.REPLACE_EXISTING
 		)
 	}
