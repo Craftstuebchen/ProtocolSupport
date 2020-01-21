@@ -1,7 +1,8 @@
+import java.nio.file.Files
 import java.text.MessageFormat
 
 
-ext.newFile = {File parent, String... childs ->
+ext.newFile = { File parent, String... childs ->
 	for (String child : childs) {
 		parent = new File(parent, child);
 	}
@@ -34,13 +35,13 @@ class UpdateLibrariesTask extends DefaultTask {
 		})
 
 		directory.listFiles()
-		.findAll({
-			!librariesNames.contains(it.getName()) && !manualLibraries.contains(it.getName())
-		})
-		.each({
-			logger.lifecycle(MessageFormat.format("Deleting old library {0}", it.getName()))
-			it.delete()
-		})
+			.findAll({
+				!librariesNames.contains(it.getName()) && !manualLibraries.contains(it.getName())
+			})
+			.each({
+				logger.lifecycle(MessageFormat.format("Deleting old library {0}", it.getName()))
+				it.delete()
+			})
 	}
 
 }
@@ -53,25 +54,26 @@ class BuildLibraryTask extends DefaultTask {
 	String targetLibraryName
 	String builderUrl
 	String buildCommand
-	String[] builtLibraryName
+	String builtLibraryName
 	String builderName = "library_builder"
 
 	@TaskAction
 	def update() {
 		File libraryFile = new File(targetDirectory, targetLibraryName)
-		File buildDirectory = new File(new File("build_libraries"), targetLibraryName)
+		File buildDir = new File("build_libraries")
+		buildDir.mkdirs()
+		File buildDirectory = new File(buildDir, targetLibraryName)
 		buildDirectory.mkdirs()
 		if (!libraryFile.exists()) {
-			logger.lifecycle(MessageFormat.format("Building library {0} from {1}", targetLibraryName, builderUrl))
+			logger.lifecycle(MessageFormat.format("Building library {0} from {1} in {2}", targetLibraryName, builderUrl, buildDirectory.name))
 			File builder = new File(buildDirectory, builderName)
 			ant.get(src: builderUrl, dest: builder)
 			getProject().exec {
 				workingDir = buildDirectory
 				commandLine = buildCommand.replace("{BUILDER}", builderName).split("\\s+")
 			}
-			java.nio.file.Files.copy(
-				getProject().newFile(buildDirectory, builtLibraryName).getAbsoluteFile().toPath(),
-				libraryFile.getAbsoluteFile().toPath()
+			Files.copy(new File(getProject().projectDir.path + File.separator + buildDirectory.path, builtLibraryName).toPath(),
+				libraryFile.toPath()
 			)
 		} else {
 			logger.lifecycle(MessageFormat.format("Skipping building of library {0} because it already exists", targetLibraryName))
